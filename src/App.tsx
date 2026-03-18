@@ -55,7 +55,9 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "";
+
 const marketTrend = [
   { month: "Jan", postings: 18240, salary: 112, interviews: 41 },
   { month: "Feb", postings: 19060, salary: 113, interviews: 42 },
@@ -153,7 +155,7 @@ function useJobs(role: string, market: string) {
     const where = market === "all" ? "us" : market;
 
     setLoading(true);
-    fetch(`/api/jobs?what=${encodeURIComponent(role)}&where=${encodeURIComponent(where)}`)
+    fetch(`${API_BASE}/api/jobs?what=${encodeURIComponent(role)}&where=${encodeURIComponent(where)}`)
       .then((res) => res.json())
       .then((data) => setJobs(data.jobs ?? []))
       .catch((err) => {
