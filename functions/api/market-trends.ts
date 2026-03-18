@@ -3,8 +3,8 @@ interface Env {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-  const body: Record<string, any> = {
-    seriesid: ["LNS14000000"], // unemployment rate example
+  const body: Record<string, unknown> = {
+    seriesid: ["LNS14000000"],
     startyear: "2024",
     endyear: "2026",
   }
@@ -21,7 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     body: JSON.stringify(body),
   })
 
-  const json = await res.json()
+  const json = await res.json() as any
   const series = json?.Results?.series?.[0]?.data ?? []
 
   const trend = series
