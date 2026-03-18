@@ -1,36 +1,60 @@
 interface Env {
-  BLS_REGISTRATION_KEY?: string
+  ADZUNA_APP_ID: string
+  ADZUNA_APP_KEY: string
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-  const body: Record<string, unknown> = {
-    seriesid: ["LNS14000000"],
-    startyear: "2024",
-    endyear: "2026",
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  if (!env.ADZUNA_APP_ID || !env.ADZUNA_APP_KEY) {
+    return Response.json(
+      { error: "Missing Adzuna credentials in environment variables." },
+      { status: 500 }
+    )
   }
 
-  if (env.BLS_REGISTRATION_KEY) {
-    body.registrationkey = env.BLS_REGISTRATION_KEY
-    body.catalog = true
-    body.calculations = true
-  }
+  const url = new URL(request.url)
+  const what = (url.searchParams.get("what") || "data analyst").trim()
+  const where = (url.searchParams.get("where") || "").trim()
+  const page = url.searchParams.get("page") || "1"
 
-  const res = await fetch("https://api.bls.gov/publicAPI/v2/timeseries/data/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const params = new URLSearchParams({
+    app_id: env.ADZUNA_APP_ID,
+    app_key: env.ADZUNA_APP_KEY,
+    what,
+    "content-type": "application/json",
+    results_per_page: "20",
+    sort_by: "date",
   })
 
-  const json = await res.json() as any
-  const series = json?.Results?.series?.[0]?.data ?? []
+  if (where && where.toLowerCase() !== "all" && where.toLowerCase() !== "us") {
+    params.set("where", where)
+  }
 
-  const trend = series
-    .filter((d: any) => d.period?.startsWith("M"))
-    .map((d: any) => ({
-      month: `${d.periodName} ${d.year}`,
-      value: Number(d.value),
-    }))
-    .reverse()
+  const apiUrl = `https://api.adzuna.com/v1/api/jobs/us/search/${page}?${params.toString()}`
+  const res = await fetch(apiUrl)
 
-  return Response.json({ trend })
+  if (!res.ok) {
+    const text = await res.text()
+    return Response.json(
+      { error: "Adzuna request failed", status: res.status, details: text },
+      { status: 502 }
+    )
+  }
+
+  const data = await res.json<any>()
+
+  const jobs = (data.results ?? []).map((job: any) => ({
+    id: job.id,
+    title: job.title,
+    company: job.company?.display_name ?? "Unknown",
+    location: job.location?.display_name ?? "",
+    salaryMin: job.salary_min ?? null,
+    salaryMax: job.salary_max ?? null,
+    redirectUrl: job.redirect_url,
+    description: job.description ?? "",
+  }))
+
+  return Response.json({
+    count: jobs.length,
+    jobs,
+  })
 }

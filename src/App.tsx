@@ -55,7 +55,7 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
-
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 const marketTrend = [
   { month: "Jan", postings: 18240, salary: 112, interviews: 41 },
   { month: "Feb", postings: 19060, salary: 113, interviews: 42 },
